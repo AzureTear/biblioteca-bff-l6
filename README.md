@@ -49,6 +49,10 @@ npm install
 cp .env.example .env
 ```
 
+Si clonaste `Umbingelelo/biblioteca-bff-l6` sin forkear, lo notas recién en el `git push` (un 403):
+forkea y `git remote set-url origin https://github.com/TU_USUARIO/biblioteca-bff-l6.git`, sin volver a
+clonar.
+
 **2 · El `.env`.** Completa `COGNITO_ISSUER` y `COGNITO_CLIENT_ID` con los valores de tu ficha: son
 los mismos que usa tu gateway. `LIBROS_URL` y `PRESTAMOS_URL` ya vienen con los puertos del curso.
 
@@ -64,7 +68,8 @@ Si falta una variable, no arranca y te dice cuál: `Configuration key "COGNITO_I
 
 Es la fila del BFF en «Antes de empezar» §1 de L6: **el BFF levanta en 3000 y `/panel` responde con
 el token de `lector@`**. Con los dos microservicios de `L1-gateway` corriendo y un access token vigente
-de `lector@biblioteca.test` —el del tramo 6 de L3—:
+de `lector@biblioteca.test` —el del tramo 6 de L3; si no lo tienes, el README de `biblioteca-web-l6`
+explica cómo copiarlo desde el navegador—:
 
 **Windows (PowerShell):**
 
