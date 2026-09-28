@@ -1,114 +1,74 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# biblioteca-bff
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+Este es el BFF del proyecto guia de DSY1107, tal como queda al terminar **L4 - La cadena
+completa**. Es el punto de partida de **L6 - RabbitMQ y tu primer mensaje**: si llegaste a esa
+sesion sin haber terminado L4, clona este repositorio en vez de tu propio codigo y sigue desde ahi.
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+No trae nada de L6: el `enviar` de `panel.service.ts` todavia no reenvia la cabecera
+`Authorization` al microservicio de prestamos. Eso lo agregas tu en L6 S4.2.
 
-## Description
+## Que hay en cada carpeta
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+| Archivo | Que es |
+|---|---|
+| `src/main.ts` | Arranque de Nest, puerto 3000 |
+| `src/app.module.ts` | Modulo raiz: `ConfigModule` global mas `PanelModule` |
+| `src/auth/jwt.guard.ts` | `JwtGuard` - verifica firma, `iss`, `token_use` y `client_id` contra el JWKS de Cognito. Deja `req.usuario` con `sub`, `scope` y `grupos` |
+| `src/auth/roles.decorator.ts` | `@Roles(...grupos)` - anota que grupos exige una ruta |
+| `src/auth/rol.guard.ts` | `RolGuard` - lee la anotacion de `@Roles` y compara contra `req.usuario.grupos` |
+| `src/panel/panel.service.ts` | Logica: llama a `LIBROS_URL` y `PRESTAMOS_URL` en paralelo, cruza los datos, filtra por dueno y valida las escrituras |
+| `src/panel/panel.controller.ts` | Rutas HTTP del panel |
 
-## Project setup
+## Las rutas que sirve
 
-```bash
-$ npm install
+| Metodo y ruta | Guards | Que hace | Llama a |
+|---|---|---|---|
+| `GET /panel` | `JwtGuard` | Los prestamos del usuario del token, con su libro cruzado | `LIBROS_URL`, `PRESTAMOS_URL` en paralelo |
+| `GET /panel/serie` | `JwtGuard` | Lo mismo que `/panel` pero en serie, solo para medir la diferencia con el paralelo | idem, uno tras otro |
+| `GET /panel/todos` | `JwtGuard`, `RolGuard` + `@Roles('bibliotecarios')` | Los prestamos de todos los usuarios | idem |
+| `POST /panel/prestamos` | `JwtGuard` | Crea un prestamo del `libroId` del cuerpo a nombre del `sub` del token | `PRESTAMOS_URL` (POST) |
+| `DELETE /panel/prestamos/:id` | `JwtGuard` | Marca un prestamo como devuelto, solo si es del `sub` del token | `PRESTAMOS_URL` (DELETE) |
+
+Sin token, las cinco responden **401**. Con un token valido pero sin el grupo `bibliotecarios`,
+`/panel/todos` responde **403**. El resto de rutas no exige ningun grupo.
+
+## Como usarlo si no terminaste L4
+
+Desde `$HOME/DSY1107` (haz fork del repo en GitHub primero):
+
+```
+git clone https://github.com/TU_USUARIO/biblioteca-bff-l6.git biblioteca-bff
+cd biblioteca-bff
+npm install
 ```
 
-## Compile and run the project
+Copia `.env.example` a `.env` y completa `COGNITO_ISSUER` y `COGNITO_CLIENT_ID` con los valores de
+tu ficha (los mismos que usa el gateway). `LIBROS_URL` y `PRESTAMOS_URL` ya vienen con los puertos
+correctos si corres los microservicios como en L1/L4.
 
-```bash
-# development
-$ npm run start
-
-# watch mode
-$ npm run start:dev
-
-# production mode
-$ npm run start:prod
+```
+npm run start:dev
 ```
 
-## Run tests
+Si ya tenias una carpeta `biblioteca-bff`, renombrala primero (por ejemplo
+`biblioteca-bff-anterior`) antes de clonar esta.
 
-```bash
-# unit tests
-$ npm run test
+## Como se comprueba
 
-# e2e tests
-$ npm run test:e2e
+La fila del BFF en la tabla "Antes de empezar" S1 de L6: **el BFF levanta en 3000 y `/panel`
+responde con el token de `lector@`**. Con `npm run start:dev` corriendo, y un access token vigente
+de `lector@biblioteca.test` en `$t`:
 
-# test coverage
-$ npm run test:cov
+```
+curl.exe -i http://localhost:3000/panel
+curl.exe -i -H "Authorization: Bearer $t" http://localhost:3000/panel
 ```
 
-## Deployment
+Tiene que dar **401** sin cabecera y **200** con el token, con tus prestamos y su libro cruzado.
 
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
+## Lo que no trae
 
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
-
-```bash
-$ npm install -g @nestjs/mau
-$ mau deploy
-```
-
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
-
-## Observability
-
-In production applications, observability is essential for understanding how your system behaves, detecting issues early, and maintaining reliable performance.
-
-[NestJS Observe](https://observe.nestjs.com) automatically instruments your NestJS application, giving you deep visibility into your system with minimal setup:
-
-- **Distributed tracing:** Follow requests across services and understand how they flow through your system.
-- **Waterfall analysis:** Visualize request execution and identify slow operations, bottlenecks, and unexpected delays.
-- **Performance analysis:** Analyze application performance in real time and quickly pinpoint areas that need optimization.
-- **Metrics:** Track key application and infrastructure metrics to understand system health and performance trends.
-- **Logging:** Centralize and correlate logs with traces and other telemetry to make debugging easier.
-- **Error tracking:** Detect errors quickly and investigate their root causes with the surrounding context.
-- **SLA monitoring:** Track service-level objectives and identify when your application is approaching or exceeding defined thresholds.
-- **Alarms and alerts:** Set up alerts for critical errors, performance degradation, SLA violations, and other anomalies so your team can react quickly.
-
-## Resources
-
-Check out a few resources that may come in handy when working with NestJS:
-
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Auto-instrument your application with [NestJS Observer](https://observer.nestjs.com). Distributed tracing, metrics, and logging made easy. Error tracking and performance monitoring for your NestJS applications.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
-
-## Support
-
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
-
-## Stay in touch
-
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
-
-## License
-
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+Nada de L6: no hay `amqplib`, no hay `servicios/package.json` ni `servicios/.env`, y `enviar` en
+`panel.service.ts` no reenvia el `Authorization` hacia `prestamos.mjs`. Eso es exactamente lo que
+agregas en L6 S4.2, cuando `prestamos.mjs` empieza a publicar el evento `prestamo.creado` y necesita
+el token para saber de quien es el prestamo.

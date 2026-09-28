@@ -1,4 +1,6 @@
-import { Controller, Get, Req, UseGuards } from '@nestjs/common';
+import {
+  Body, Controller, Delete, Get, Param, ParseIntPipe, Post, Req, UseGuards,
+} from '@nestjs/common';
 import { JwtGuard, type Usuario } from '../auth/jwt.guard.js';
 import { RolGuard } from '../auth/rol.guard.js';
 import { Roles } from '../auth/roles.decorator.js';
@@ -29,5 +31,15 @@ export class PanelController {
       usuario: { sub: req.usuario.sub, grupos: req.usuario.grupos },
       ...(await this.panel.todos()),
     };
+  }
+
+  @Post('prestamos')
+  async prestar(@Req() req: { usuario: Usuario }, @Body() cuerpo: { libroId?: unknown }) {
+    return this.panel.prestar(req.usuario.sub, cuerpo.libroId);
+  }
+
+  @Delete('prestamos/:id')
+  async devolver(@Req() req: { usuario: Usuario }, @Param('id', ParseIntPipe) id: number) {
+    return this.panel.devolver(req.usuario.sub, id);
   }
 }
